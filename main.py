@@ -1,191 +1,221 @@
+"""
+ETL Pipeline para Datos Deportivos
+==================================
+Pipeline principal que ejecuta las etapas de Extract, Transform y Load
+para procesar datos deportivos de Le Mans.
 
+Autor: Sistema ETL
+Fecha: 2025
+"""
 
-import sys
 import os
-from datetime import datetime
+import sys
+from pathlib import Path
 
-# Agregar el directorio actual al path para imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Agregar el directorio raíz al path para importaciones
+project_root = Path(__file__).parent
+sys.path.append(str(project_root))
 
-# Imports de módulos del proyecto
 from Extract.SportsExtract import Extractor
-from Transform.SportsTransformer import Transformer
+from Transform.SportsTransformer import SportsTransformer
 from Load.SportsLoader import Loader
 from Config.config import Config
 
 
-def print_banner():
-    """Imprime el banner del proyecto."""
+def print_header():
+    """Imprime el encabezado del programa."""
     print("=" * 60)
-    print("🏎️  PROYECTO ETL - DATOS QUALIFYING F1")
+    print("🏁 ETL PIPELINE - DATOS DEPORTIVOS LE MANS 🏁")
     print("=" * 60)
-    print(f"Iniciado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("-" * 60)
+    print()
 
 
-def print_step(step_number, description):
-    """Imprime información del paso actual."""
-    print(f"\n📋 PASO {step_number}: {description}")
-    print("-" * 40)
+def print_step(step_number, title):
+    """Imprime el título de cada paso del ETL."""
+    print(f"\n{'='*20} PASO {step_number}: {title.upper()} {'='*20}")
 
 
-def print_success(message):
-    """Imprime mensaje de éxito."""
-    print(f"✅ {message}")
+def extract_data():
+    """
+    Ejecuta la etapa de extracción de datos.
+    
+    Returns:
+        DataFrame: Los datos extraídos o None si hay error
+    """
+    print_step(1, "Extracción de Datos")
+    
+    # Verificar que el archivo existe
+    input_file = Config.INPUT_PATH
+    if not os.path.exists(input_file):
+        print(f"❌ Error: El archivo {input_file} no existe")
+        return None
+    
+    print(f"📂 Archivo fuente: {input_file}")
+    
+    # Crear extractor y extraer datos
+    extractor = Extractor(input_file)
+    df = extractor.extract()
+    
+    if df is not None:
+        print(f"✅ Extracción exitosa:")
+        print(f"   📊 Filas extraídas: {len(df)}")
+        print(f"   📋 Columnas: {len(df.columns)}")
+        print(f"   📝 Primeras columnas: {list(df.columns[:5])}")
+        print(f"   📅 Rango de años: {df['Year'].min():.0f} - {df['Year'].max():.0f}")
+    else:
+        print("❌ Error en la extracción")
+    
+    return df
 
 
-def print_error(message):
-    """Imprime mensaje de error."""
-    print(f"❌ ERROR: {message}")
+def transform_data(df):
+    """
+    Ejecuta la etapa de transformación de datos.
+    
+    Args:
+        df: DataFrame con los datos extraídos
+        
+    Returns:
+        DataFrame: Los datos transformados o None si hay error
+    """
+    print_step(2, "Transformación de Datos")
+    
+    if df is None:
+        print("❌ Error: No hay datos para transformar")
+        return None
+    
+    # Crear transformador y procesar datos
+    transformer = SportsTransformer(df)
+    transformed_df = transformer.transform()
+    
+    if transformed_df is not None:
+        # Mostrar estadísticas finales
+        stats = transformer.get_summary_stats()
+        print(f"\n📊 ESTADÍSTICAS FINALES:")
+        print(f"   📈 Total de registros: {stats['total_rows']}")
+        print(f"   📋 Total de columnas: {stats['total_columns']}")
+        print(f"   👥 Pilotos únicos: {stats['unique_drivers']}")
+        print(f"   🏢 Equipos únicos: {stats['unique_teams']}")
+        print(f"   🏁 Velocidad promedio: {stats['avg_speed']}")
+        print(f"   📅 Período: {stats['year_range']}")
+    else:
+        print("❌ Error en la transformación")
+    
+    return transformed_df
 
 
-def print_info(message):
-    """Imprime información general."""
-    print(f"ℹ️  {message}")
+def load_data(df):
+    """
+    Ejecuta la etapa de carga de datos.
+    
+    Args:
+        df: DataFrame con los datos transformados
+        
+    Returns:
+        bool: True si la carga fue exitosa, False en caso contrario
+    """
+    print_step(3, "Carga de Datos")
+    
+    if df is None:
+        print("❌ Error: No hay datos para cargar")
+        return False
+    
+    # Crear loader
+    loader = Loader(df)
+    
+    try:
+        # Cargar en SQLite
+        print("💾 Guardando en base de datos SQLite...")
+        loader.to_sqlite()
+        
+        # Cargar en CSV (backup)
+        output_csv = os.path.join("Output", "sports_data_processed.csv")
+        
+        # Crear directorio Output si no existe
+        os.makedirs("Output", exist_ok=True)
+        
+        print(f"💾 Guardando CSV de respaldo en: {output_csv}")
+        loader.to_csv(output_csv)
+        
+        print("✅ Carga completada exitosamente")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error en la carga: {e}")
+        return False
+
+
+def print_summary(success, start_time=None):
+    """
+    Imprime el resumen final del proceso ETL.
+    
+    Args:
+        success (bool): Si el proceso fue exitoso
+        start_time: Tiempo de inicio (opcional)
+    """
+    print(f"\n{'='*60}")
+    print("📋 RESUMEN DEL PROCESO ETL")
+    print(f"{'='*60}")
+    
+    if success:
+        print("🎉 ¡PROCESO ETL COMPLETADO EXITOSAMENTE!")
+        print("✅ Todos los pasos ejecutados correctamente")
+        print(f"📂 Datos disponibles en:")
+        print(f"   🗄️  Base de datos: {Config.SQLITE_DB_PATH}")
+        print(f"   📄 CSV procesado: Output/sports_data_processed.csv")
+    else:
+        print("❌ PROCESO ETL FALLÓ")
+        print("⚠️  Revisa los errores mostrados anteriormente")
+    
+    print(f"{'='*60}")
 
 
 def main():
     """
-    Función principal que ejecuta el pipeline ETL completo.
+    Función principal que ejecuta todo el pipeline ETL.
     """
+    import time
+    start_time = time.time()
+    
+    # Imprimir encabezado
+    print_header()
+    
+    success = False
+    
     try:
-        print_banner()
-        
-        # PASO 1: EXTRACCIÓN
-        print_step(1, "EXTRACCIÓN DE DATOS")
-        print_info(f"Archivo fuente: {Config.INPUT_PATH}")
-        
-        extractor = Extractor()
-        df_raw = extractor.extract_csv(Config.INPUT_PATH)
-        
+        # PASO 1: Extracción
+        df_raw = extract_data()
         if df_raw is None:
-            print_error("No se pudieron extraer los datos")
-            return False
-            
-        print_success(f"Datos extraídos: {len(df_raw)} registros")
-        print_info(f"Columnas: {list(df_raw.columns)}")
+            raise Exception("Error en la extracción de datos")
         
-        # PASO 2: TRANSFORMACIÓN
-        print_step(2, "TRANSFORMACIÓN Y LIMPIEZA")
+        # PASO 2: Transformación
+        df_transformed = transform_data(df_raw)
+        if df_transformed is None:
+            raise Exception("Error en la transformación de datos")
         
-        transformer = Transformer(df_raw)
-        df_clean = transformer.clean_qualifying_data()
+        # PASO 3: Carga
+        load_success = load_data(df_transformed)
+        if not load_success:
+            raise Exception("Error en la carga de datos")
         
-        if df_clean is None:
-            print_error("Error en la transformación de datos")
-            return False
-            
-        print_success("Datos transformados exitosamente")
-        print_info(f"Registros procesados: {len(df_clean)}")
-        print_info(f"Códigos únicos generados: {df_clean['Code'].nunique()}")
-        
-        # Mostrar muestra de datos transformados
-        print("\n📊 MUESTRA DE DATOS TRANSFORMADOS:")
-        print(df_clean[['Season', 'Round', 'GivenName', 'FamilyName', 'Code', 'ConstructorName']].head(10).to_string())
-        
-        # PASO 3: CARGA
-        print_step(3, "CARGA DE DATOS")
-        
-        loader = Loader(df_clean)
-        
-        # Crear directorio de salida si no existe
-        output_dir = "Output"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print_info(f"Directorio creado: {output_dir}")
-        
-        # Generar nombres de archivo con timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        csv_output = f"{output_dir}/qualifying_results_clean_{timestamp}.csv"
-        
-        # Cargar a CSV
-        print_info("Guardando en formato CSV...")
-        loader.to_csv(csv_output)
-        print_success(f"Archivo CSV guardado: {csv_output}")
-        
-        # Cargar a SQLite
-        print_info("Guardando en base de datos SQLite...")
-        loader.to_sqlite()
-        print_success(f"Datos guardados en SQLite: {Config.SQLITE_DB_PATH}")
-        print_info(f"Tabla: {Config.SQLITE_TABLE}")
-        
-        # RESUMEN FINAL
-        print("\n" + "=" * 60)
-        print("🎉 PIPELINE ETL COMPLETADO EXITOSAMENTE")
-        print("=" * 60)
-        print("📈 Estadísticas finales:")
-        print(f"   • Registros procesados: {len(df_clean):,}")
-        print(f"   • Pilotos únicos: {df_clean['DriverID'].nunique()}")
-        print(f"   • Constructores únicos: {df_clean['ConstructorID'].nunique()}")
-        print(f"   • Temporadas: {df_clean['Season'].min()} - {df_clean['Season'].max()}")
-        print(f"   • Códigos generados: {df_clean['Code'].nunique()}")
-        
-        print("\n📁 Archivos generados:")
-        print(f"   • CSV: {csv_output}")
-        print(f"   • SQLite: {Config.SQLITE_DB_PATH}")
-        
-        print(f"\n⏱️  Completado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        return True
+        success = True
         
     except Exception as e:
-        print_error(f"Error inesperado en el pipeline: {e}")
-        import traceback
-        print(f"Detalles del error:\n{traceback.format_exc()}")
-        return False
-
-
-def show_data_sample():
-    """
-    Función auxiliar para mostrar una muestra de los datos procesados.
-    """
-    try:
-        print_banner()
-        print("📊 VISUALIZACIÓN DE DATOS PROCESADOS")
+        print(f"\n❌ ERROR CRÍTICO: {e}")
+        success = False
+    
+    finally:
+        # Calcular tiempo transcurrido
+        end_time = time.time()
+        elapsed_time = end_time - start_time
         
-        # Cargar datos desde SQLite
-        import sqlite3
-        import pandas as pd
+        # Mostrar resumen
+        print_summary(success)
+        print(f"⏱️  Tiempo total: {elapsed_time:.2f} segundos")
         
-        conn = sqlite3.connect(Config.SQLITE_DB_PATH)
-        df = pd.read_sql_query(f"SELECT * FROM {Config.SQLITE_TABLE} LIMIT 20", conn)
-        conn.close()
-        
-        if not df.empty:
-            print(f"\nÚltimos datos en la base de datos ({len(df)} registros):")
-            print("-" * 60)
-            print(df.to_string())
-            
-            print("\nEstadísticas rápidas:")
-            print(f"• Temporadas: {df['Season'].unique()}")
-            print(f"• Constructores: {df['ConstructorName'].unique()}")
-        else:
-            print_info("No hay datos en la base de datos. Ejecuta el ETL primero.")
-            
-    except Exception as e:
-        print_error(f"Error al mostrar datos: {e}")
+        # Código de salida
+        sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
-    """
-    Punto de entrada del programa.
-    Acepta argumentos de línea de comandos para diferentes operaciones.
-    """
-    if len(sys.argv) > 1:
-        command = sys.argv[1].lower()
-        
-        if command == "show" or command == "view":
-            show_data_sample()
-        elif command == "help" or command == "-h":
-            print("🏎️  ETL Project - Procesamiento de datos F1")
-            print("\nUso:")
-            print("  python main.py        - Ejecuta el pipeline ETL completo")
-            print("  python main.py show   - Muestra muestra de datos procesados")
-            print("  python main.py help   - Muestra esta ayuda")
-        else:
-            print_error(f"Comando desconocido: {command}")
-            print("Usa 'python main.py help' para ver comandos disponibles")
-    else:
-        # Ejecutar pipeline ETL por defecto
-        success = main()
-        sys.exit(0 if success else 1)
+    main()
