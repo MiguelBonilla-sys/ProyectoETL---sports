@@ -16,10 +16,10 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
-from Extract.SportsExtract import Extractor
-from Transform.SportsTransformer import SportsTransformer
-from Load.SportsLoader import Loader
-from Config.config import Config
+from app.Extract.SportsExtract import Extractor
+from app.Transform.SportsTransformer import SportsTransformer
+from app.Load.SportsLoader import Loader
+from app.Config.config import Config
 
 
 def print_header():
@@ -129,10 +129,10 @@ def load_data(df):
         loader.to_sqlite()
         
         # Cargar en CSV (backup)
-        output_csv = os.path.join("Output", "sports_data_processed.csv")
+        output_csv = Config.CSV_OUTPUT_PATH
         
         # Crear directorio Output si no existe
-        os.makedirs("Output", exist_ok=True)
+        os.makedirs(Config.OUTPUT_DIR, exist_ok=True)
         
         print(f"💾 Guardando CSV de respaldo en: {output_csv}")
         loader.to_csv(output_csv)

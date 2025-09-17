@@ -1,5 +1,5 @@
 
-from Config.config import Config
+from ..Config.config import Config
 import sqlite3
 
 class Loader:

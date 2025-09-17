@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from Config.config import Config
+from ..Config.config import Config
 
 class SportsTransformer:
     """
