@@ -386,9 +386,9 @@ class SportsVisualizer:
         # Generar cada tipo de gráfica
         charts = [
             ("Análisis de Velocidad", self.create_speed_analysis),
-            #("Análisis de Resistencia", self.create_endurance_trends),
-            #("Análisis Temporal", self.create_temporal_analysis),
-            #("Dashboard Resumen", self.create_summary_dashboard)
+            ("Análisis de Resistencia", self.create_endurance_trends),
+            ("Análisis Temporal", self.create_temporal_analysis),
+            ("Dashboard Resumen", self.create_summary_dashboard)
         ]
         
         for chart_name, chart_method in charts:
