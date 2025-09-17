@@ -23,3 +23,6 @@ class Config:
         'bins': [0, 100, 150, 200, float('inf')],
         'labels': ['Short', 'Medium', 'Long', 'Ultra Long']
     }
+    
+    CHARTS_OUTPUT_DIR = r'app\Visualize\Charts'
+    CHART_THEMES = 'whitegrid'  # Tema seaborn por defecto
