@@ -2,10 +2,11 @@
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![Pandas](https://img.shields.io/badge/Pandas-2.3.2-green.svg)](https://pandas.pydata.org/)
+[![PySpark](https://img.shields.io/badge/PySpark-3.5.0-red.svg)](https://spark.apache.org/)
 [![Seaborn](https://img.shields.io/badge/Seaborn-0.12.2-orange.svg)](https://seaborn.pydata.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Un pipeline ETL completo y modular para procesar y visualizar datos históricos de las 24 Horas de Le Mans, con capacidades avanzadas de análisis y generación automática de gráficos.
+Un pipeline ETL completo y modular para procesar y visualizar datos históricos de las 24 Horas de Le Mans, con capacidades avanzadas de análisis y generación automática de gráficos. Incluye implementaciones tanto en Pandas como en PySpark para manejo eficiente de datasets de cualquier tamaño.
 
 ## 📋 Tabla de Contenidos
 
@@ -27,6 +28,7 @@ Un pipeline ETL completo y modular para procesar y visualizar datos históricos 
 - **⚙️ Transformación**: Limpieza, normalización y generación de campos calculados
 - **💾 Carga**: Persistencia dual en SQLite y CSV para máxima compatibilidad
 - **📊 Visualización**: Generación automática de análisis gráficos con Seaborn
+- **⚡ Procesamiento Dual**: Implementaciones en Pandas y PySpark para diferentes escalas de datos
 
 ### 🎨 Análisis Visual Avanzado
 - **Análisis de Velocidad**: Evolución temporal y categorización por rendimiento
@@ -39,6 +41,13 @@ Un pipeline ETL completo y modular para procesar y visualizar datos históricos 
 - **Configuración centralizada** para fácil mantenimiento
 - **Logging detallado** con indicadores visuales (emojis)
 - **Manejo robusto de errores** con fallbacks automáticos
+
+### ⚡ Capacidades de PySpark
+- **Procesamiento distribuido** para datasets masivos (> 1GB)
+- **Optimización automática** de consultas y transformaciones
+- **Escalabilidad horizontal** en clusters de múltiples nodos
+- **Compatibilidad total** con el pipeline ETL existente
+- **Rendimiento superior** para operaciones complejas de big data
 
 ## 🏗️ Arquitectura
 
@@ -59,10 +68,13 @@ ProyectoETL-sports/
 │   ├── Config/          # ⚙️ Configuración
 │   │   └── config.py
 │   └── Output/          # 📤 Resultados finales
-│       ├── sports_data.db
-│       └── sports_data_processed.csv
-├── main.py              # 🚀 Pipeline ETL principal
+│       ├── sports_data.db              # Base de datos SQLite (Pandas)
+│       ├── sports_data_processed.csv   # CSV procesado (Pandas)
+│       ├── sports_data_spark.db        # Base de datos SQLite (Spark)
+│       └── sports_data_spark.csv       # CSV procesado (Spark)
+├── main.py              # 🚀 Pipeline ETL principal (Pandas)
 ├── mainV.2.py          # 📊 Script de visualización
+├── spark_main.py       # ⚡ Pipeline ETL con Apache Spark
 └── requirements.txt     # 📦 Dependencias
 ```
 
@@ -100,17 +112,49 @@ app/Extract/Files/data.csv
 
 ## 💻 Uso
 
-### Pipeline ETL Completo
+### 🚀 Pipeline ETL Completo (Pandas)
 ```bash
 python main.py
 ```
-Ejecuta todo el proceso: extracción → transformación → carga
+**Descripción**: Script principal que ejecuta el pipeline ETL completo usando Pandas para procesar datos de Le Mans.
+- **Extracción**: Lee datos CSV desde `app/Extract/Files/data.csv`
+- **Transformación**: Limpia, normaliza y agrega campos calculados (décadas, categorías de velocidad/resistencia)
+- **Carga**: Guarda resultados en SQLite (`sports_data.db`) y CSV (`sports_data_processed.csv`)
+- **Salida**: Proporciona estadísticas detalladas del proceso y tiempo de ejecución
 
-### Solo Visualización
+### 📊 Solo Visualización
 ```bash
 python mainV.2.py
 ```
-Genera gráficas desde datos ya procesados (requiere ejecutar `main.py` primero)
+**Descripción**: Script especializado para generar visualizaciones desde datos ya procesados.
+- **Prerrequisito**: Requiere ejecutar `main.py` primero para crear la base de datos
+- **Funcionalidad**: Genera 4 tipos de análisis gráficos (velocidad, resistencia, temporal, dashboard)
+- **Salida**: Guarda gráficas en formato PNG en `app/Visualize/Charts/`
+- **Validación**: Verifica automáticamente que la base de datos existe antes de proceder
+
+### ⚡ Pipeline ETL con PySpark
+```bash
+python spark_main.py
+```
+**Descripción**: Versión alternativa del pipeline ETL usando PySpark para procesamiento distribuido.
+- **Tecnología**: Utiliza PySpark (Python API de Apache Spark) para manejo de big data
+- **Proceso**: Mismo flujo ETL pero optimizado para datasets más grandes
+- **Salida**: Genera `sports_data_spark.csv` y `sports_data_spark.db`
+- **Ventajas**: Mejor rendimiento para datasets masivos y procesamiento paralelo
+
+### 🔄 Comparación de Scripts Main
+
+| Script | Tecnología | Uso Recomendado | Salida |
+|--------|------------|-----------------|---------|
+| `main.py` | Pandas | Datasets pequeños-medianos (< 1GB) | `sports_data.db`, `sports_data_processed.csv` |
+| `mainV.2.py` | Pandas + Seaborn | Solo visualización (requiere datos procesados) | Gráficas PNG en `Charts/` |
+| `spark_main.py` | PySpark | Datasets grandes (> 1GB) o procesamiento distribuido | `sports_data_spark.db`, `sports_data_spark.csv` |
+
+### 📋 Flujo de Trabajo Recomendado
+
+1. **Para análisis básico**: `python main.py` → `python mainV.2.py`
+2. **Para big data**: `python spark_main.py` → `python mainV.2.py`
+3. **Solo visualización**: `python mainV.2.py` (si ya tienes datos procesados)
 
 ### Ejemplo de salida:
 ```

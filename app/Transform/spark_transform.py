@@ -1,7 +1,16 @@
 from pyspark.sql import DataFrame, functions as F, types as T
+from pyspark.sql.functions import when, col, isnan, isnull
 
 TEXT_COLS = ['Drivers','Team','Car','Tyre','Series','Driver_nationality','Team_nationality']
 NUM_COLS = ['Year','Laps','Km','Mi','Average_speed_kmh','Average_speed_mph','Average_lap_time']
+
+def safe_cast_to_double(df, column_name):
+    """Convierte una columna a double de manera segura, manejando valores malformados"""
+    return df.withColumn(
+        column_name,
+        when(col(column_name).rlike("^[+-]?\\d*\\.?\\d+$"), col(column_name).cast("double"))
+        .otherwise(None)
+    )
 
 class SparkSportsTransformer:
     def __init__(self, df: DataFrame):
@@ -19,14 +28,14 @@ class SparkSportsTransformer:
         for col in TEXT_COLS:
             if col in df.columns:
                 df = df.withColumn(col, F.initcap(F.trim(F.col(col).cast("string"))))
-        # columnas numéricas
-        for col in NUM_COLS:
-            if col in df.columns:
-                df = df.withColumn(col, F.col(col).cast("double"))
-        # limpiar Class
+        # columnas numéricas usando conversión segura
+        for col_name in NUM_COLS:
+            if col_name in df.columns:
+                df = safe_cast_to_double(df, col_name)
+        # limpiar Class usando conversión segura
         if "Class" in df.columns:
             df = df.withColumn("Class", F.regexp_replace(F.col("Class").cast("string"), ">", ""))
-            df = df.withColumn("Class", F.col("Class").cast("double"))
+            df = safe_cast_to_double(df, "Class")
         self.df = df
         return self.df
 
